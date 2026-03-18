@@ -53,3 +53,18 @@ nvcc -O3 -arch=sm_86 benchmark_cublas.cu -o benchmark_cublas -lcublas && ./bench
 **Key insight:** Memory bandwidth utilization is ~5% of the 192 GB/s theoretical peak.
 The kernel spends most of its time waiting on global memory reads/writes of the N×N
 attention matrix — not computing. This is the wall FlashAttention breaks through.
+
+## Phase 2 Results — Naive Attention (O(N²) memory bottleneck)
+
+| N | d | Time | Mem BW utilization | Attn matrix size |
+|---|---|------|--------------------|-----------------|
+| 128 | 64 | 0.020 ms | 13.26 GB/s (6.9%) | 0.1 MB |
+| 256 | 64 | 0.058 ms | 13.50 GB/s (7.0%) | 0.3 MB |
+| 512 | 64 | 0.214 ms | 12.23 GB/s (6.4%) | 1.0 MB |
+| 1024 | 64 | 0.937 ms | 10.07 GB/s (5.2%) | 4.2 MB |
+| 2048 | 64 | 3.248 ms | 10.98 GB/s (5.7%) | 16.8 MB |
+| 4096 | 64 | 12.837 ms | 10.78 GB/s (5.6%) | 67.1 MB |
+
+**Key insight:** Memory bandwidth utilization is ~5% of the 192 GB/s theoretical peak.
+The kernel spends most of its time waiting on global memory reads/writes of the N×N
+attention matrix — not computing. This is the wall FlashAttention breaks through.
