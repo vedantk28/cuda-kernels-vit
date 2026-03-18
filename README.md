@@ -98,3 +98,29 @@ attention matrix — not computing. This is the wall FlashAttention breaks throu
 **Key insight:** Memory bandwidth utilization is ~5% of the 192 GB/s theoretical peak.
 The kernel spends most of its time waiting on global memory reads/writes of the N×N
 attention matrix — not computing. This is the wall FlashAttention breaks through.
+
+## Phase 3 Results — FlashAttention (O(N) memory, honest benchmarks)
+
+| N | Naive (ours) | Flash v1 (ours) | Flash v2 (ours) | PyTorch SDPA |
+|---|-------------|-----------------|-----------------|--------------|
+| 128 | 0.020ms | 0.091ms | 0.055ms | 0.030ms |
+| 256 | 0.058ms | 0.177ms | 0.111ms | 0.058ms |
+| 512 | 0.214ms | 0.419ms | 0.378ms | 0.114ms |
+| 1024 | 0.937ms | 1.254ms | 1.317ms | 0.228ms |
+| 2048 | 3.248ms | 4.678ms | 5.248ms | 0.837ms |
+| 4096 | 12.837ms | 19.701ms | 21.253ms | 3.461ms |
+
+**What our implementation gets right:**
+- Correct online softmax algorithm (validated to 1e-8 vs reference)
+- O(N) memory — no N×N attention matrix ever written to global memory
+- Numerically stable with running (max, sum) per tile
+
+**Why we're slower than PyTorch SDPA:**
+- Tile size Br=16 vs FlashAttention-2's Br=64-128 — too few elements per block
+- No tensor core wmma instructions — compute-bound inner loop runs on CUDA cores
+- No float4 vectorized global memory loads — 4x fewer memory transactions possible
+- Low occupancy — not enough warps active to hide memory latency
+
+**What this teaches:** The algorithmic insight (online softmax, O(N) memory) is
+separable from the systems engineering (tensor cores, vectorization, occupancy).
+Understanding both layers is what the project demonstrates.
